@@ -2,10 +2,11 @@ import { Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { ControlGroup } from '@/components/ControlGroup';
-import { hslToCss, randomBrightHex, hexToHsl } from '@/lib/colour';
+import { hslToCss, hslToHex, randomBrightHex, hexToHsl } from '@/lib/colour';
 import type { HSLColour } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { useDispatchSettings, useSettings } from '@/store/settings';
@@ -56,6 +57,7 @@ export function ColourControls() {
 
   const activeColour = local[active] ?? [0, 0, 50];
   const [h, s, l] = activeColour;
+  const activeHex = hslToHex(activeColour);
 
   const hueGradient = `linear-gradient(to right, ${[0, 60, 120, 180, 240, 300, 360]
     .map((hh) => `hsl(${hh}, ${s}%, ${l}%)`)
@@ -102,6 +104,15 @@ export function ColourControls() {
         ))}
       </div>
 
+      <HexColourInput
+        key={`${active}-${activeHex}`}
+        value={activeHex}
+        onChange={(hex) => {
+          const next = local.map((colour, i) => (i === active ? hexToHsl(hex) : colour));
+          commit(next);
+        }}
+      />
+
       <div className="space-y-3">
         <ChannelSlider
           label="Hue"
@@ -129,6 +140,53 @@ export function ColourControls() {
         />
       </div>
     </ControlGroup>
+  );
+}
+
+function HexColourInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [draft, setDraft] = useState(value);
+
+  const applyDraft = (next: string) => {
+    setDraft(next);
+    const normalized = next.startsWith('#') ? next : `#${next}`;
+    if (/^#[0-9a-f]{6}$/i.test(normalized)) onChange(normalized);
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="colour-hex">Hex colour</Label>
+      <div className="flex gap-2">
+        <label
+          className="relative size-9 shrink-0 cursor-pointer overflow-hidden rounded-md border border-input shadow-xs focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/30"
+          title="Open colour picker"
+        >
+          <span className="sr-only">Open colour picker</span>
+          <input
+            type="color"
+            value={value}
+            onChange={(event) => onChange(event.target.value)}
+            className="absolute -inset-2 size-14 cursor-pointer border-0 bg-transparent p-0"
+            aria-label="Choose colour"
+          />
+        </label>
+        <Input
+          id="colour-hex"
+          value={draft}
+          onChange={(event) => applyDraft(event.target.value)}
+          onBlur={() => setDraft(value)}
+          maxLength={7}
+          spellCheck={false}
+          className="font-mono uppercase"
+          aria-label="Hex colour value"
+        />
+      </div>
+    </div>
   );
 }
 
